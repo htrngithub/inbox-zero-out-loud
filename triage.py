@@ -31,6 +31,11 @@ The five buckets, and what belongs in each:
 Rules that matter:
 - A reply needed and an errand needed are BOTH "@To Do". Distinguish them in
   your reason, not your bucket.
+- An automated notification is NOT an action. Security alerts for a sign-in the
+  user recognises, delivery updates, statements, appointment reminders already
+  on the calendar -- these are "Archive". They are telling him something, not
+  asking him for something. Only route one to "@To Do" if it demands a specific
+  step with a consequence for missing it.
 - If the user was waiting on someone and that person has NOW REPLIED, the item
   moves OUT of "@Waiting For" and back to "@To Do". This is the most important
   transition in the system.
