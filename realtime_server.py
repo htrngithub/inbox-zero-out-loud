@@ -26,6 +26,13 @@ MODEL = "gpt-realtime"
 # Voices that survive g711 telephone audio without distorting.
 VOICE = os.environ.get("RT_VOICE", "alloy")
 
+# How loud something must be before it counts as speech (0-1). The default of
+# 0.5 treats a noisy room as talking; on a hackathon floor that means the agent
+# answers words nobody said.
+VAD_THRESHOLD = float(os.environ.get("VAD_THRESHOLD", "0.85"))
+# How long a pause ends his turn. Long enough that thinking is not an answer.
+VAD_SILENCE_MS = int(os.environ.get("VAD_SILENCE_MS", "1200"))
+
 app = FastAPI()
 SESSION = {"items": [], "gmail": None, "labels": {}, "decisions": []}
 
@@ -133,6 +140,81 @@ async def call_start(request: Request):
         media_type="application/xml")
 
 
+@app.api_route("/keypad", methods=["GET", "POST"])
+async def keypad(request: Request):
+    """Decisions by keypad instead of voice.
+
+    A room loud enough to fool speech detection cannot fake a keypress. Same
+    triage, same labels, same state -- only the input changes. Kept as the
+    path that cannot be defeated by a noisy venue.
+    """
+    form = await request.form() if request.method == "POST" else {}
+    digit = (form.get("Digits") or "").strip()
+    idx = int(request.query_params.get("i", "0"))
+
+    if not SESSION["items"]:
+        load_items()
+
+    if digit and 0 <= idx - 1 < len(SESSION["items"]):
+        bucket = KEYPAD_BUCKETS.get(digit, "@To Do")
+        item = SESSION["items"][idx - 1]
+        applied = apply_to_gmail(item, bucket)
+        SESSION["decisions"].append({
+            "id": item["id"], "subject": item["subject"], "bucket": bucket,
+            "applied_in_gmail": applied,
+            "decided_on": datetime.now().astimezone().isoformat(),
+        })
+        write_decisions()
+        record_state(item, bucket)
+        print(f"  filed (keypad): {item['subject'][:38]} -> {bucket} "
+              f"(gmail={'yes' if applied else 'no'})")
+
+    return HTMLResponse(keypad_twiml(idx), media_type="application/xml")
+
+
+KEYPAD_BUCKETS = {"1": "@To Do", "2": "@Waiting For", "3": "@To Read",
+                  "4": "Archive", "9": "Delete"}
+
+
+def load_items():
+    with open(BUILD / "triage_output.json") as f:
+        t = json.load(f)
+    SESSION["items"] = [i for i in t["items"] if i["spoken"]]
+    SESSION["totals"] = (t["total"], t["silent_count"], t["spoken_count"])
+    SESSION["gmail"], SESSION["labels"] = connect_gmail()
+    return t
+
+
+def keypad_twiml(idx):
+    from xml.sax.saxutils import escape
+    v = "Polly.Danielle-Generative"
+    items = SESSION["items"]
+
+    if idx == 0:
+        total, silent, spoken = SESSION.get("totals", (0, 0, 0))
+        intro = (f"Morning. You got {total} overnight. I filed {silent}. "
+                 f"{spoken} need you.")
+    else:
+        intro = ""
+
+    if idx >= len(items):
+        return (f'<Response><Say voice="{v}">{intro} That is everything. '
+                f'Everything else is filed.</Say></Response>')
+
+    item = items[idx]
+    gist = escape(item.get("gist", "")[:220])
+    lead = ""
+    if item.get("returned_to_you"):
+        lead = (f"You had this in Waiting For since "
+                f"{item['prior_since'][-2:].lstrip('0')}. They replied. ")
+    body = (f"{intro} {lead}{gist} "
+            f"Press 1 for to-do, 2 for waiting, 3 to read later, 4 to archive.")
+    return (f'<Response><Gather numDigits="1" timeout="12" method="POST" '
+            f'action="/keypad?i={idx + 1}">'
+            f'<Say voice="{v}">{escape(body)}</Say></Gather>'
+            f'<Redirect method="POST">/keypad?i={idx + 1}</Redirect></Response>')
+
+
 @app.websocket("/media-stream")
 async def media_stream(ws: WebSocket):
     """Relay audio between the phone call and the model, both directions."""
@@ -155,7 +237,15 @@ async def media_stream(ws: WebSocket):
                     # pcmu is G.711 u-law, which is what a phone line carries.
                     "input": {
                         "format": {"type": "audio/pcmu"},
-                        "turn_detection": {"type": "server_vad"},
+                        # Tuned for a loud room: a high threshold ignores
+                        # background chatter, and the long silence_duration
+                        # stops it cutting in while he is still thinking.
+                        "turn_detection": {
+                            "type": "server_vad",
+                            "threshold": VAD_THRESHOLD,
+                            "prefix_padding_ms": 300,
+                            "silence_duration_ms": VAD_SILENCE_MS,
+                        },
                         "transcription": {"model": "whisper-1"},
                     },
                     "output": {"format": {"type": "audio/pcmu"},

@@ -28,24 +28,6 @@
       "note": "Asked Dave for revised numbers."
     },
     {
-      "thread_key": "contract review \u2014 any update?",
-      "subject": "Re: Contract review \u2014 any update?",
-      "correspondent": "Marcus Webb",
-      "bucket": "@To Do",
-      "decided_on": "2026-09-12T11:24:43.887483-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
-    },
-    {
-      "thread_key": "kitchen quote \u2014 revised numbers attached",
-      "subject": "Re: Kitchen quote \u2014 revised numbers attached",
-      "correspondent": "Dave Rinaldi",
-      "bucket": "@To Do",
-      "decided_on": "2026-09-12T11:24:53.278339-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
-    },
-    {
       "thread_key": "interview availability \u2014 next week",
       "subject": "Interview availability \u2014 next week",
       "correspondent": "Priya Raman",
@@ -64,11 +46,29 @@
       "note": "Decided on the morning call."
     },
     {
+      "thread_key": "contract review \u2014 any update?",
+      "subject": "Re: Contract review \u2014 any update?",
+      "correspondent": "Hung Tran",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T11:54:51.114893-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "kitchen quote \u2014 revised numbers attached",
+      "subject": "Re: Kitchen quote \u2014 revised numbers attached",
+      "correspondent": "Hung Tran",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T11:54:56.834072-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
       "thread_key": "saturday plans",
       "subject": "Re: Saturday plans",
-      "correspondent": "Kim",
-      "bucket": "@To Do",
-      "decided_on": "2026-09-12T11:25:09.448327-07:00",
+      "correspondent": "Hung Tran",
+      "bucket": "@Waiting For",
+      "decided_on": "2026-09-12T11:55:21.773906-07:00",
       "decided_by": "hung",
       "note": "Decided on the morning call."
     }
