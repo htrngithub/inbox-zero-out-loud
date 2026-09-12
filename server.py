@@ -21,7 +21,7 @@ import gmail_apply
 from speech import build_script, item_line, VOICE_HINTS
 
 BUILD = Path(__file__).parent
-VOICE = "Polly.Ruth-Neural"
+VOICE = os.environ.get("VOICE", "Polly.Danielle-Generative")
 
 app = Flask(__name__)
 

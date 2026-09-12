@@ -15,7 +15,7 @@ from pathlib import Path
 from speech import build_script, plain_text
 
 BUILD = Path(__file__).parent
-VOICE = "Polly.Ruth-Neural"
+VOICE = os.environ.get("VOICE", "Polly.Danielle-Generative")
 
 
 def load_env():
