@@ -38,7 +38,10 @@ Rules that matter:
   step with a consequence for missing it.
 - If the user was waiting on someone and that person has NOW REPLIED, the item
   moves OUT of "@Waiting For" and back to "@To Do". This is the most important
-  transition in the system.
+  transition in the system. A message carrying PRIOR STATE of "@Waiting For" is
+  itself the reply he was waiting for -- the ball is now in his court, so it is
+  "@To Do", never "@Waiting For". Chasing him for an answer ("any update?") is
+  still them replying.
 - Prefer being honest over being decisive. If an email is genuinely ambiguous,
   say so in your reason and pick the more conservative bucket.
 
