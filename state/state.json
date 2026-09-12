@@ -1,5 +1,4 @@
 {
-  "_comment": "Memory between calls. Each entry is one decision the agent recorded on a previous call. This file is what makes 'you've been waiting on this since the 3rd' possible.",
   "calls": [
     {
       "call_id": "call-2026-09-03-0710",
@@ -26,51 +25,6 @@
       "decided_on": "2026-09-08T07:05:00-07:00",
       "decided_by": "hung",
       "note": "Asked Dave for revised numbers."
-    },
-    {
-      "thread_key": "interview availability \u2014 next week",
-      "subject": "Interview availability \u2014 next week",
-      "correspondent": "Priya Raman",
-      "bucket": "@To Do",
-      "decided_on": "2026-09-12T11:24:59.077474-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
-    },
-    {
-      "thread_key": "your prescription is ready for pickup",
-      "subject": "Your prescription is ready for pickup",
-      "correspondent": "Westside Pharmacy",
-      "bucket": "Archive",
-      "decided_on": "2026-09-12T11:25:05.717797-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
-    },
-    {
-      "thread_key": "saturday plans",
-      "subject": "Re: Saturday plans",
-      "correspondent": "Hung Tran",
-      "bucket": "@Waiting For",
-      "decided_on": "2026-09-12T11:55:21.773906-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
-    },
-    {
-      "thread_key": "contract review \u2014 any update?",
-      "subject": "Re: Contract review \u2014 any update?",
-      "correspondent": "Hung Tran",
-      "bucket": "@To Do",
-      "decided_on": "2026-09-12T12:05:55.467108-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
-    },
-    {
-      "thread_key": "kitchen quote \u2014 revised numbers attached",
-      "subject": "Re: Kitchen quote \u2014 revised numbers attached",
-      "correspondent": "Hung Tran",
-      "bucket": "@Waiting For",
-      "decided_on": "2026-09-12T12:06:35.936427-07:00",
-      "decided_by": "hung",
-      "note": "Decided on the morning call."
     }
   ]
 }
