@@ -1,0 +1,31 @@
+{
+  "_comment": "Memory between calls. Each entry is one decision the agent recorded on a previous call. This file is what makes 'you've been waiting on this since the 3rd' possible.",
+  "calls": [
+    {
+      "call_id": "call-2026-09-03-0710",
+      "date": "2026-09-03T07:10:00-07:00",
+      "items_spoken": 3,
+      "items_silent": 9
+    }
+  ],
+  "decisions": [
+    {
+      "thread_key": "contract review",
+      "subject": "Contract review — draft attached",
+      "correspondent": "Marcus Webb",
+      "bucket": "@Waiting For",
+      "decided_on": "2026-09-03T07:12:00-07:00",
+      "decided_by": "hung",
+      "note": "Sent the draft back to Marcus, waiting on his read."
+    },
+    {
+      "thread_key": "kitchen quote",
+      "subject": "Kitchen quote",
+      "correspondent": "Dave Rinaldi",
+      "bucket": "@Waiting For",
+      "decided_on": "2026-09-08T07:05:00-07:00",
+      "decided_by": "hung",
+      "note": "Asked Dave for revised numbers."
+    }
+  ]
+}

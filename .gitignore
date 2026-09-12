@@ -1,0 +1,17 @@
+# Secrets -- never commit
+.env
+.env.local
+credentials.json
+token.json
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local run artifacts
+triage_output.json
+build/triage_output.json
+*.log

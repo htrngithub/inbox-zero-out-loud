@@ -1,0 +1,6 @@
+# Core paths need no third-party packages -- triage.py, speech.py and call.py
+# run on the standard library alone.
+# These are for the Gmail integration.
+google-auth>=2.0
+google-auth-oauthlib>=1.0
+google-api-python-client>=2.0

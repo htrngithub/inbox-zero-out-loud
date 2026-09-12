@@ -1,0 +1,101 @@
+{
+  "_comment": "The 12 demo emails. Ground truth from the seed script; 'expected' is what a correct triage produces and is used by the test, not by the agent.",
+  "messages": [
+    {
+      "id": "m01",
+      "from": "Dave Rinaldi <dave@rinaldibuild.com>",
+      "subject": "Re: Kitchen quote — revised numbers attached",
+      "date": "2026-09-11T18:22:00-07:00",
+      "body": "Hung, took another look after our call. Revised the cabinet line down but the electrical went up once I saw the panel. Net is about $1,400 over the original. Can you confirm by Monday so I can hold the installer slot?",
+      "expected": "@To Do"
+    },
+    {
+      "id": "m02",
+      "from": "Priya Raman <priya.raman@northfieldpartners.com>",
+      "subject": "Interview availability — next week",
+      "date": "2026-09-11T16:05:00-07:00",
+      "body": "We'd like to schedule the next conversation. Are you available Tuesday or Wednesday afternoon? Let me know what works and I'll send an invite.",
+      "expected": "@To Do"
+    },
+    {
+      "id": "m03",
+      "from": "Westside Pharmacy <noreply@westsiderx.com>",
+      "subject": "Your prescription is ready for pickup",
+      "date": "2026-09-11T14:40:00-07:00",
+      "body": "Ready at the pharmacy counter. We hold prescriptions for 10 days.",
+      "expected": "@To Do"
+    },
+    {
+      "id": "m04",
+      "from": "Marcus Webb <mwebb@webbcounsel.com>",
+      "subject": "Re: Contract review — any update?",
+      "date": "2026-09-11T11:15:00-07:00",
+      "body": "Following up on the draft I sent over two weeks ago. Just want to make sure it didn't get lost. No rush if you're still reviewing.",
+      "expected": "@To Do"
+    },
+    {
+      "id": "m05",
+      "from": "First Harbor Bank <statements@firstharbor.com>",
+      "subject": "Your monthly statement is ready",
+      "date": "2026-09-11T09:00:00-07:00",
+      "body": "Your September statement is now available in online banking. No action is needed.",
+      "expected": "Archive"
+    },
+    {
+      "id": "m06",
+      "from": "The Overflow <hello@theoverflow.news>",
+      "subject": "Weekly digest: 12 stories we're reading",
+      "date": "2026-09-11T06:30:00-07:00",
+      "body": "This week: the state of small models, a new take on retrieval, and why your team's standup is broken. Plus nine more.",
+      "expected": "@To Read"
+    },
+    {
+      "id": "m07",
+      "from": "Lumen Home <deals@lumenhome.com>",
+      "subject": "40% off everything — this weekend only",
+      "date": "2026-09-11T05:10:00-07:00",
+      "body": "Our biggest sale of the season ends Sunday at midnight. Shop now before it's gone.",
+      "expected": "Delete"
+    },
+    {
+      "id": "m08",
+      "from": "Ridgeline Outfitters <orders@ridgeline.com>",
+      "subject": "Order shipped — arriving Saturday",
+      "date": "2026-09-10T20:45:00-07:00",
+      "body": "Your order is on the way and should arrive Saturday. Tracking is available in your account.",
+      "expected": "Archive"
+    },
+    {
+      "id": "m09",
+      "from": "Kim <kim.tran.home@gmail.com>",
+      "subject": "Re: Saturday plans",
+      "date": "2026-09-10T19:30:00-07:00",
+      "body": "I think we said we'd decide today. Are we still doing the beach thing with the kids or pushing it to Sunday?",
+      "expected": "@To Do"
+    },
+    {
+      "id": "m10",
+      "from": "Google <no-reply@accounts.google.com>",
+      "subject": "Security alert: new sign-in",
+      "date": "2026-09-10T18:02:00-07:00",
+      "body": "A new sign-in to your account from a Windows device. If this was you, no action is needed.",
+      "expected": "Archive"
+    },
+    {
+      "id": "m11",
+      "from": "South Bay Dental <reminders@southbaydental.com>",
+      "subject": "Reminder: your appointment is Thursday at 2pm",
+      "date": "2026-09-10T12:00:00-07:00",
+      "body": "This is a reminder of your appointment Thursday at 2:00pm. Reply CANCEL to cancel.",
+      "expected": "Archive"
+    },
+    {
+      "id": "m12",
+      "from": "Agent Weekly <editor@agentweekly.io>",
+      "subject": "The state of AI agents — September issue",
+      "date": "2026-09-10T07:00:00-07:00",
+      "body": "Inside: what changed in tool use this quarter, the quiet rise of voice surfaces, and three teams shipping agents into production.",
+      "expected": "@To Read"
+    }
+  ]
+}
