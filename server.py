@@ -17,6 +17,7 @@ from xml.sax.saxutils import escape
 
 from flask import Flask, Response, request
 
+import gmail_apply
 from speech import build_script, item_line, VOICE_HINTS
 
 BUILD = Path(__file__).parent
@@ -25,7 +26,21 @@ VOICE = "Polly.Ruth-Neural"
 app = Flask(__name__)
 
 # Loaded once at call start so the phone loop never waits on a file read.
-SESSION = {"items": [], "index": 0, "decisions": []}
+SESSION = {"items": [], "index": 0, "decisions": [], "gmail": None,
+           "labels": {}}
+
+
+def connect_gmail():
+    """Attach Gmail if it is set up. Silent no-op when it is not, so the
+    voice demo is never blocked by missing credentials."""
+    if not gmail_apply.available():
+        return None, {}
+    try:
+        svc = gmail_apply.get_service()
+        return svc, gmail_apply.ensure_labels(svc)
+    except Exception as e:
+        print(f"  ! Gmail unavailable ({e}); labels will not be applied.")
+        return None, {}
 
 
 def say(text, gather=False, hints=None):
@@ -50,6 +65,7 @@ def load_session():
     SESSION["items"] = [i for i in t["items"] if i["spoken"]]
     SESSION["index"] = 0
     SESSION["decisions"] = []
+    SESSION["gmail"], SESSION["labels"] = connect_gmail()
     return t
 
 
@@ -80,11 +96,13 @@ def decide():
     if idx < len(SESSION["items"]):
         item = SESSION["items"][idx]
         bucket = interpret(heard)
+        applied = apply_to_gmail(item, bucket)
         SESSION["decisions"].append({
             "id": item["id"],
             "subject": item["subject"],
             "heard": heard,
             "bucket": bucket,
+            "applied_in_gmail": applied,
             "decided_on": datetime.now().astimezone().isoformat(),
         })
         write_decisions()
@@ -110,6 +128,24 @@ def next_twiml(ack):
     nxt = item_line(SESSION["items"][idx], idx + 1)
     prompt = f'{ack}<break time="500ms"/>{nxt}<break time="400ms"/>What do you want to do?'
     return say(prompt, gather=True, hints=VOICE_HINTS)
+
+
+def apply_to_gmail(item, bucket):
+    """Move the label for real, while the caller is still on the phone.
+
+    This is the moment the demo turns on: he says a word, and the label moves
+    on screen. Failure here must never break the call, so it is caught.
+    """
+    svc = SESSION.get("gmail")
+    gid = item.get("gmail_id")
+    if not svc or not gid:
+        return False
+    try:
+        gmail_apply.apply_bucket(svc, gid, bucket, SESSION["labels"])
+        return True
+    except Exception as e:
+        print(f"  ! Could not apply label ({e})")
+        return False
 
 
 def interpret(heard):

@@ -187,7 +187,13 @@ def enrich(items, messages, state):
             it["returned_to_you"] = False
         out.append(it)
     # Items that came back to him lead the call -- that is the money moment.
-    out.sort(key=lambda x: (not x["returned_to_you"], x["id"]))
+    # Within those, the longest-waiting goes first: "since the 3rd" lands
+    # harder than "since the 8th", and it is the one that proves the memory.
+    def order(x):
+        since = x.get("prior_since", "9999-99-99")
+        return (not x["returned_to_you"], since, x["id"])
+
+    out.sort(key=order)
     return out
 
 
