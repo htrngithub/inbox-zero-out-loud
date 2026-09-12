@@ -88,3 +88,10 @@ if __name__ == "__main__":
     print("=== What the agent says ===\n")
     print(plain_text(ssml))
     print(f"\n=== {len(spoken)} items spoken ===")
+
+
+# Words to bias phone speech recognition toward. Twilio weights these, which
+# matters because "waiting for" is the phrase most likely to be misheard and
+# the one that carries the demo.
+VOICE_HINTS = ("todo, to do, waiting for, waiting, to read, read later, "
+               "archive, delete, draft it, reply, keep")
