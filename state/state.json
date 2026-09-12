@@ -11,7 +11,7 @@
   "decisions": [
     {
       "thread_key": "contract review",
-      "subject": "Contract review — draft attached",
+      "subject": "Contract review \u2014 draft attached",
       "correspondent": "Marcus Webb",
       "bucket": "@Waiting For",
       "decided_on": "2026-09-03T07:12:00-07:00",
@@ -26,6 +26,51 @@
       "decided_on": "2026-09-08T07:05:00-07:00",
       "decided_by": "hung",
       "note": "Asked Dave for revised numbers."
+    },
+    {
+      "thread_key": "contract review \u2014 any update?",
+      "subject": "Re: Contract review \u2014 any update?",
+      "correspondent": "Marcus Webb",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T11:24:43.887483-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "kitchen quote \u2014 revised numbers attached",
+      "subject": "Re: Kitchen quote \u2014 revised numbers attached",
+      "correspondent": "Dave Rinaldi",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T11:24:53.278339-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "interview availability \u2014 next week",
+      "subject": "Interview availability \u2014 next week",
+      "correspondent": "Priya Raman",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T11:24:59.077474-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "your prescription is ready for pickup",
+      "subject": "Your prescription is ready for pickup",
+      "correspondent": "Westside Pharmacy",
+      "bucket": "Archive",
+      "decided_on": "2026-09-12T11:25:05.717797-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "saturday plans",
+      "subject": "Re: Saturday plans",
+      "correspondent": "Kim",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T11:25:09.448327-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
     }
   ]
 }

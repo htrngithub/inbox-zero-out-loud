@@ -4,3 +4,8 @@
 google-auth>=2.0
 google-auth-oauthlib>=1.0
 google-api-python-client>=2.0
+
+# Realtime voice path (realtime_server.py) -- optional, the Polly path needs none
+fastapi>=0.110
+uvicorn>=0.27
+websockets>=12.0
