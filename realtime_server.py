@@ -32,10 +32,12 @@ VOICE = os.environ.get("RT_VOICE", "alloy")
 VAD_THRESHOLD = float(os.environ.get("VAD_THRESHOLD", "0.85"))
 # How long a pause ends his turn. Long enough that thinking is not an answer.
 VAD_SILENCE_MS = int(os.environ.get("VAD_SILENCE_MS", "1200"))
+# How long to let him say hello before the agent starts talking anyway.
+GREETING_WAIT_S = float(os.environ.get("GREETING_WAIT_S", "3"))
 
 app = FastAPI()
 SESSION = {"items": [], "gmail": None, "labels": {}, "decisions": [],
-           "last_heard": ""}
+           "last_heard": "", "opened": False}
 
 # Without this the model only TALKS about filing things. The whole point is
 # that saying it out loud is what moves the label.
@@ -165,6 +167,10 @@ names appear below or what you think you hear. Never switch language.
 
 You have ALREADY triaged his inbox. {t['total']} arrived overnight. You filed
 {t['silent_count']} of them without needing him. {t['spoken_count']} need him.
+
+He has just picked up the phone. If he says hello first, greet him back in a
+few words before anything else -- do not talk over him and do not launch
+straight into the list.
 
 {opening}
 
@@ -310,6 +316,8 @@ async def media_stream(ws: WebSocket):
     """Relay audio between the phone call and the model, both directions."""
     await ws.accept()
     load_env()
+    SESSION["decisions"] = SESSION.get("decisions", [])
+    SESSION["opened"] = False
     SESSION["gmail"], SESSION["labels"] = connect_gmail()
 
     async with websockets.connect(
@@ -346,9 +354,17 @@ async def media_stream(ws: WebSocket):
                 "tool_choice": "auto",
             },
         }))
-        # Nudge it to speak first -- otherwise it waits for him, and the call
-        # opens with silence.
-        await oai.send(json.dumps({"type": "response.create"}))
+        # Do NOT speak immediately: the first sentence would play while the
+        # phone is still on its way to his ear. Wait for him to say something,
+        # and if he says nothing, open anyway after a short beat.
+        async def open_when_ready():
+            await asyncio.sleep(GREETING_WAIT_S)
+            if not SESSION.get("opened"):
+                SESSION["opened"] = True
+                print(f"  opening after {GREETING_WAIT_S}s of silence")
+                await oai.send(json.dumps({"type": "response.create"}))
+
+        asyncio.create_task(open_when_ready())
 
         stream_sid = {"v": None}
 
@@ -367,6 +383,7 @@ async def media_stream(ws: WebSocket):
                 pass
 
         async def model_to_phone():
+          try:
             async for raw in oai:
                 ev = json.loads(raw)
                 t = ev.get("type", "")
@@ -375,6 +392,9 @@ async def media_stream(ws: WebSocket):
                     print(f"  [oai] {t}")
                 if t == "error":
                     print(f"  [oai ERROR] {json.dumps(ev)[:400]}")
+                if t == "input_audio_buffer.speech_started":
+                    # He is talking. Whatever else happens, do not open over him.
+                    SESSION["opened"] = True
                 if t == "conversation.item.input_audio_transcription.completed":
                     said = ev.get("transcript", "").strip()
                     SESSION["last_heard"] = said
@@ -397,8 +417,13 @@ async def media_stream(ws: WebSocket):
                         await handle_file_email(oai, ev)
                 elif ev.get("type") == "response.done":
                     log_transcript(ev)
+          except (WebSocketDisconnect, RuntimeError):
+            # He hung up. Expected.
+            print("  call ended")
 
-        await asyncio.gather(phone_to_model(), model_to_phone())
+        await asyncio.gather(phone_to_model(), model_to_phone(),
+                             return_exceptions=True)
+        print(f"  call finished ({len(SESSION['decisions'])} filed)")
 
 
 DECISION_WORDS = (
