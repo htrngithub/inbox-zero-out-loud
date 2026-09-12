@@ -52,8 +52,7 @@ def place_call(ssml, sid, token, frm, to, url_base=None):
     url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Calls.json"
     if url_base:
         # Two-way: Twilio fetches each turn from our server, so it can listen.
-        endpoint = os.environ.get("CALL_ENDPOINT", "/call")
-        params = {"To": to, "From": frm, "Url": f"{url_base}{endpoint}"}
+        params = {"To": to, "From": frm, "Url": f"{url_base}/call"}
     else:
         # One-way floor: the whole script goes out with the call itself.
         params = {"To": to, "From": frm, "Twiml": twiml(ssml)}
