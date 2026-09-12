@@ -316,8 +316,14 @@ async def media_stream(ws: WebSocket):
     """Relay audio between the phone call and the model, both directions."""
     await ws.accept()
     load_env()
-    SESSION["decisions"] = SESSION.get("decisions", [])
     SESSION["opened"] = False
+
+    # Resume only if this is a callback we ourselves scheduled. Otherwise a
+    # decision left in memory from an earlier call silently skips items --
+    # including, on the first take of a demo, the one that matters most.
+    if SESSION.pop("callback_in", None) is None:
+        SESSION["decisions"] = []
+        SESSION["last_heard"] = ""
     SESSION["gmail"], SESSION["labels"] = connect_gmail()
 
     async with websockets.connect(
