@@ -34,16 +34,40 @@ VAD_THRESHOLD = float(os.environ.get("VAD_THRESHOLD", "0.85"))
 VAD_SILENCE_MS = int(os.environ.get("VAD_SILENCE_MS", "1200"))
 
 app = FastAPI()
-SESSION = {"items": [], "gmail": None, "labels": {}, "decisions": []}
+SESSION = {"items": [], "gmail": None, "labels": {}, "decisions": [],
+           "last_heard": ""}
 
 # Without this the model only TALKS about filing things. The whole point is
 # that saying it out loud is what moves the label.
+CALL_BACK_TOOL = {
+    "type": "function",
+    "name": "call_back_later",
+    "description": (
+        "End the call now and ring again after a delay, because he is busy. "
+        "Call this as soon as he says he cannot talk right now."),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "minutes": {
+                "type": "number",
+                "description": (
+                    "How long to wait before calling back. Use what he asked "
+                    "for; 0.5 for 'thirty seconds', 5 for 'a few minutes'. "
+                    "Default 5 if he did not say."),
+            },
+        },
+        "required": ["minutes"],
+    },
+}
+
 FILE_EMAIL_TOOL = {
     "type": "function",
     "name": "file_email",
     "description": (
-        "File one email into a GTD bucket. Call this immediately after the "
-        "user says what to do with an item, before you speak again."),
+        "File one email into a GTD bucket. Call this ONLY after the user has "
+        "clearly said which bucket he wants. If you are unsure what he said, "
+        "ask him to repeat instead of calling this. A wrong label is worse "
+        "than asking twice."),
     "parameters": {
         "type": "object",
         "properties": {
@@ -82,7 +106,16 @@ def briefing():
     with open(BUILD / "triage_output.json") as f:
         t = json.load(f)
     spoken = [i for i in t["items"] if i["spoken"]]
-    SESSION["items"] = spoken
+
+    # A callback picks up where the last call stopped. Re-reading items he has
+    # already dealt with is the fastest way to make the agent feel broken.
+    done = {d["id"] for d in SESSION.get("decisions", [])}
+    remaining = [i for i in spoken if i["id"] not in done]
+    if done and remaining:
+        print(f"  resuming: {len(done)} already filed, "
+              f"{len(remaining)} to go")
+    SESSION["items"] = remaining or spoken
+    spoken = SESSION["items"]
 
     lines = []
     for n, item in enumerate(spoken, 1):
@@ -97,6 +130,15 @@ def briefing():
             line += f'\n   What he must decide: {item["decision"]}'
         lines.append(line)
 
+    resumed = bool(SESSION.get("decisions"))
+    opening = ("This is a CALLBACK -- you rang earlier, he asked you to call "
+               "back. Open with one short line acknowledging that ('Me again') "
+               "and go straight to the first item. Do not re-introduce "
+               "yourself or repeat the counts."
+               if resumed else
+               "Open the call: greet him, say how many came in, say how many "
+               "you filed, say how many need him.")
+
     return f"""You are a morning inbox assistant, on the phone with your user.
 
 SPEAK ENGLISH. Every word of this call is in English, always, no matter what
@@ -105,9 +147,9 @@ names appear below or what you think you hear. Never switch language.
 You have ALREADY triaged his inbox. {t['total']} arrived overnight. You filed
 {t['silent_count']} of them without needing him. {t['spoken_count']} need him.
 
-Open the call like this, in your own words: greet him, say how many came in,
-say how many you filed, say how many need him. Then go through the items below
-ONE AT A TIME.
+{opening}
+
+Then go through the items below ONE AT A TIME.
 
 For each item, tell him WHAT IT SAYS -- the number, the date, the ask. He is on
 a phone and cannot see the email, so "Dave replied about the quote" is useless
@@ -120,11 +162,33 @@ The items:
 How to talk:
 - Like a sharp assistant who knows him, not a phone menu. Short sentences.
 - ONE item at a time. Never list them all at once.
-- When he answers, confirm in three words and move on. Do not repeat the item.
-- His answers map to: To Do, Waiting For, To Read, Archive, Delete. If he says
-  something else ("draft it", "leave it"), pick the closest and say which.
+- When he answers clearly, confirm in three words and move on.
 - If he interrupts, stop talking and listen.
 - When the last item is done, say everything else is filed, then stop.
+
+IF HE IS BUSY:
+He may answer while doing something else. If he says he cannot talk now, or
+asks you to call back, or to give him a few minutes -- do not push, do not
+read the next item. Call call_back_later with the delay he asked for, say
+you will ring back then, and end the call. Anything already filed stays filed.
+
+HEARING HIM -- this matters more than anything else on this call:
+You are on a speakerphone in a loud room. You WILL pick up other people's
+conversation, and you will sometimes receive words he did not say.
+
+- Only act on a decision you actually heard him say. The decisions are:
+  to do, waiting for, to read, archive, delete. Also accept obvious
+  equivalents: "keep it", "leave it with me", "they owe me", "read later",
+  "file it", "junk".
+- If what you heard is not clearly one of those, DO NOT GUESS and DO NOT FILE.
+  Ask: "Sorry, I didn't catch that -- to do, waiting, read later, or archive?"
+  Ask again if you need to. Asking twice is fine. Filing the wrong thing is not.
+- If you hear speech that is clearly not addressed to you -- background talk, a
+  fragment, something unrelated to the email -- say nothing about it and simply
+  wait. Do not respond to it, do not treat it as an answer.
+- Never call file_email unless you are confident which bucket he chose. The
+  tool call is the commitment; silence is always safer than a wrong label.
+
 Never invent an email that is not on the list.
 Remember: English only, the entire call."""
 
@@ -252,7 +316,7 @@ async def media_stream(ws: WebSocket):
                                "voice": VOICE},
                 },
                 "instructions": briefing(),
-                "tools": [FILE_EMAIL_TOOL],
+                "tools": [FILE_EMAIL_TOOL, CALL_BACK_TOOL],
                 "tool_choice": "auto",
             },
         }))
@@ -286,7 +350,9 @@ async def media_stream(ws: WebSocket):
                 if t == "error":
                     print(f"  [oai ERROR] {json.dumps(ev)[:400]}")
                 if t == "conversation.item.input_audio_transcription.completed":
-                    print(f"  HUNG SAID: {ev.get('transcript','').strip()}")
+                    said = ev.get("transcript", "").strip()
+                    SESSION["last_heard"] = said
+                    print(f"  HUNG SAID: {said}")
                 if ev.get("type") == "response.output_audio.delta" \
                         and ev.get("delta") and stream_sid["v"]:
                     await ws.send_json({
@@ -296,11 +362,85 @@ async def media_stream(ws: WebSocket):
                     })
                 elif ev.get("type") == \
                         "response.function_call_arguments.done":
-                    await handle_file_email(oai, ev)
+                    if ev.get("name") == "call_back_later":
+                        await handle_call_back(oai, ev)
+                    else:
+                        await handle_file_email(oai, ev)
                 elif ev.get("type") == "response.done":
                     log_transcript(ev)
 
         await asyncio.gather(phone_to_model(), model_to_phone())
+
+
+DECISION_WORDS = (
+    "to do", "todo", "to-do", "waiting", "wait", "they owe", "owe me",
+    "read", "later", "archive", "file it", "filed", "delete", "junk",
+    "trash", "keep", "leave it", "mine", "draft", "reply",
+)
+
+
+def heard_a_decision():
+    """Did he actually say something decision-shaped on this turn?
+
+    The model is instructed to ask when unsure, but instructions are not a
+    guarantee. This is the backstop: if the last thing transcribed from him
+    contains no decision word, we refuse to file no matter what the model
+    claims it heard. In a loud room a wrong label is the failure that shows
+    on camera.
+    """
+    last = SESSION.get("last_heard", "")
+    if not last:
+        return False
+    low = last.lower()
+    return any(w in low for w in DECISION_WORDS)
+
+
+async def handle_call_back(oai, ev):
+    """He is busy. Hang up and ring again shortly.
+
+    The agent calling him is the whole premise, so it has to be able to take
+    "not now" for an answer -- otherwise it is just an alarm clock. The
+    decisions already made are kept; the callback resumes what is left.
+    """
+    try:
+        args = json.loads(ev.get("arguments") or "{}")
+        minutes = float(args.get("minutes", 5))
+    except Exception:
+        minutes = 5
+    minutes = max(0.25, min(minutes, 120))
+
+    SESSION["callback_in"] = minutes
+    when = (f"{int(minutes * 60)} seconds" if minutes < 1
+            else f"{int(minutes)} minutes")
+    print(f"  CALLBACK requested in {when}")
+
+    await oai.send(json.dumps({
+        "type": "conversation.item.create",
+        "item": {"type": "function_call_output", "call_id": ev.get("call_id"),
+                 "output": f"Confirmed. Say you will call back in {when}, "
+                           f"then say goodbye and stop talking."},
+    }))
+    await oai.send(json.dumps({"type": "response.create"}))
+    asyncio.create_task(schedule_callback(minutes))
+
+
+async def schedule_callback(minutes):
+    """Wait, then place the call again."""
+    await asyncio.sleep(minutes * 60)
+    try:
+        import call as caller
+        caller.load_env()
+        url_base = caller.tunnel_url()
+        sid = os.environ.get("TW_SID")
+        token = os.environ.get("TW_TOKEN")
+        frm, to = os.environ.get("TW_FROM"), os.environ.get("TW_TO")
+        if not all([sid, token, frm, to]):
+            print("  ! callback skipped: credentials missing")
+            return
+        r = caller.place_call("", sid, token, frm, to, url_base)
+        print(f"  CALLED BACK -> {r.get('sid')} {r.get('status')}")
+    except Exception as e:
+        print(f"  ! callback failed: {e}")
 
 
 async def handle_file_email(oai, ev):
@@ -309,6 +449,21 @@ async def handle_file_email(oai, ev):
     Applies the Gmail label and records the decision so the NEXT call can say
     "you filed this on the 12th". Without this the call is just narration.
     """
+    if not heard_a_decision():
+        heard = SESSION.get("last_heard", "")
+        print(f"  REFUSED to file -- no clear decision heard ({heard!r})")
+        await oai.send(json.dumps({
+            "type": "conversation.item.create",
+            "item": {
+                "type": "function_call_output",
+                "call_id": ev.get("call_id"),
+                "output": ("I could not confirm what he said. Ask him to "
+                           "repeat: to do, waiting, read later, or archive?"),
+            },
+        }))
+        await oai.send(json.dumps({"type": "response.create"}))
+        return
+
     try:
         args = json.loads(ev.get("arguments") or "{}")
         n = int(args.get("item_number", 0))
@@ -327,6 +482,7 @@ async def handle_file_email(oai, ev):
         })
         write_decisions()
         record_state(item, bucket)
+        SESSION["last_heard"] = ""  # one utterance files at most one item
         print(f"  filed: {item['subject'][:40]} -> {bucket} "
               f"(gmail={'yes' if applied else 'no'})")
         result = f"Filed under {bucket}."
