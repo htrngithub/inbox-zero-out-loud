@@ -33,11 +33,30 @@ def twiml(ssml):
     return f'<Response><Say voice="{VOICE}">{ssml}</Say></Response>'
 
 
-def place_call(ssml, sid, token, frm, to):
+def tunnel_url():
+    """Ask the local ngrok agent for its public URL, if it is running."""
+    try:
+        with urllib.request.urlopen(
+                "http://127.0.0.1:4040/api/tunnels", timeout=3) as r:
+            import json
+            tunnels = json.loads(r.read()).get("tunnels", [])
+        for t in tunnels:
+            if t.get("public_url", "").startswith("https://"):
+                return t["public_url"]
+    except Exception:
+        pass
+    return None
+
+
+def place_call(ssml, sid, token, frm, to, url_base=None):
     url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Calls.json"
-    data = urllib.parse.urlencode({
-        "To": to, "From": frm, "Twiml": twiml(ssml),
-    }).encode()
+    if url_base:
+        # Two-way: Twilio fetches each turn from our server, so it can listen.
+        params = {"To": to, "From": frm, "Url": f"{url_base}/call"}
+    else:
+        # One-way floor: the whole script goes out with the call itself.
+        params = {"To": to, "From": frm, "Twiml": twiml(ssml)}
+    data = urllib.parse.urlencode(params).encode()
 
     import base64
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
@@ -79,8 +98,15 @@ def main():
               "A short paste 401s with code 20003.", file=sys.stderr)
         sys.exit(1)
 
+    url_base = None if "--one-way" in sys.argv else tunnel_url()
+    if url_base:
+        print(f"Two-way call via {url_base}")
+        print("  (the call server must be running on the tunnelled port)")
+    else:
+        print("One-way call: reads the list, does not listen.")
+
     print(f"Calling {to} from {frm}...")
-    r = place_call(ssml, sid, token, frm, to)
+    r = place_call(ssml, sid, token, frm, to, url_base)
     print(f"Call {r.get('sid')} -> status {r.get('status')}")
 
 
