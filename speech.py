@@ -23,16 +23,29 @@ def opening_line(t):
     """The line that makes the silence audible."""
     total, spoken, silent = t["total"], t["spoken_count"], t["silent_count"]
     return (
-        f"Good morning. {total} new overnight."
-        f'<break time="400ms"/> '
-        f"{silent} sorted, you don't need to hear about them."
-        f'<break time="400ms"/> '
-        f"{spoken} need you."
+        f"Morning."
+        f'<break time="450ms"/> '
+        f"You got {total} overnight."
+        f'<break time="350ms"/> '
+        f"I've filed {silent} of them,"
+        f'<break time="200ms"/> '
+        f"you don't need to hear about those."
+        f'<break time="450ms"/> '
+        f"{spoken} actually need you."
     )
 
 
-COUNTERS = ["First", "Second", "Third", "Fourth", "Fifth",
-            "Sixth", "Seventh", "Eighth"]
+# How a person actually moves through a list out loud. Not "First:", "Second:"
+# -- those read as a form being filled in.
+OPENERS = ["Okay, first up", "Next", "Then", "After that", "Last one",
+           "And then", "One more"]
+
+# Varied so two back-to-back returns do not read as a template.
+RETURNED = [
+    "{who} finally got back to you on the {subject}.",
+    "{who} replied on the {subject}.",
+    "{who} came back to you about the {subject}.",
+]
 
 
 def spoken_subject(subject):
@@ -43,22 +56,50 @@ def spoken_subject(subject):
     return s.rstrip("?.!").strip()
 
 
+def first_name(sender):
+    """'Marcus Webb <m@x.com>' -> 'Marcus'. Falls back to the org name."""
+    name = sender.split("<")[0].strip().strip('"')
+    if not name:
+        return "someone"
+    parts = name.split()
+    # A person gets a first name; a company keeps its whole name.
+    if len(parts) == 2 and all(p[:1].isupper() for p in parts):
+        return parts[0]
+    return name
+
+
 def item_line(item, index):
-    """One item, one sentence. Prior state leads when it exists."""
-    sender = item["from"].split("<")[0].strip()
-    counter = COUNTERS[index - 1] if index <= len(COUNTERS) else f"Number {index}"
-    subject = spoken_subject(item["subject"])
+    """One item, said the way a person would say it.
+
+    Prior state leads when it exists, because "they finally got back to you"
+    is the most useful thing the agent knows.
+    """
+    who = first_name(item["from"])
+    subject = spoken_subject(item["subject"]).lower()
+    opener = OPENERS[min(index - 1, len(OPENERS) - 1)]
 
     if item.get("returned_to_you"):
         d = date.fromisoformat(item["prior_since"])
+        lead = RETURNED[(index - 1) % len(RETURNED)].format(
+            who=who, subject=subject)
+        tail = ("so that's back on your plate now."
+                if index == 1 else "so that one's yours again.")
         return (
-            f"{counter}: {sender}, on the {subject.lower()}."
-            f'<break time="300ms"/> '
-            f"You've had this in Waiting For since the {ordinal(d.day)}."
-            f'<break time="300ms"/> '
-            f"They've replied, so it's back on you."
+            f"{opener} -- {lead}"
+            f'<break time="350ms"/> '
+            f"You'd been waiting on that since the {ordinal(d.day)},"
+            f'<break time="200ms"/> '
+            f"{tail}"
         )
-    return f"{counter}: {sender}. {subject}."
+
+    # The model's reason usually names the person already; saying the name
+    # first as well gives you "Priya. Priya needs your availability."
+    reason = item.get("reason", "").strip().rstrip(".")
+    if reason and len(reason) < 60:
+        if who.lower() in reason.lower():
+            return f'{opener} -- {reason}.'
+        return f'{opener} -- {who}.<break time="250ms"/> {reason.capitalize()}.'
+    return f'{opener} -- {who}, about the {subject}.'
 
 
 def build_script(triage_path=None):
@@ -72,7 +113,8 @@ def build_script(triage_path=None):
         parts.append('<break time="600ms"/>')
         parts.append(item_line(item, n))
     parts.append('<break time="600ms"/>')
-    parts.append("That's everything. The rest is filed.")
+    parts.append("That's it.<break time=\"300ms\"/> "
+                 "Everything else is already filed.")
     return "".join(parts), spoken
 
 
