@@ -25,6 +25,42 @@
       "decided_on": "2026-09-08T07:05:00-07:00",
       "decided_by": "hung",
       "note": "Asked Dave for revised numbers."
+    },
+    {
+      "thread_key": "contract review \u2014 any update?",
+      "subject": "Re: Contract review \u2014 any update?",
+      "correspondent": "Hung Tran",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T12:48:11.337362-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "kitchen quote \u2014 revised numbers attached",
+      "subject": "Re: Kitchen quote \u2014 revised numbers attached",
+      "correspondent": "Hung Tran",
+      "bucket": "@Waiting For",
+      "decided_on": "2026-09-12T12:48:29.960328-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "saturday plans",
+      "subject": "Re: Saturday plans",
+      "correspondent": "Hung Tran",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T12:48:50.622310-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
+    },
+    {
+      "thread_key": "interview availability \u2014 next week",
+      "subject": "Interview availability \u2014 next week",
+      "correspondent": "Hung Tran",
+      "bucket": "@To Do",
+      "decided_on": "2026-09-12T12:49:18.744791-07:00",
+      "decided_by": "hung",
+      "note": "Decided on the morning call."
     }
   ]
 }
