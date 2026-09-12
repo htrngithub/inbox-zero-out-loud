@@ -80,11 +80,14 @@ def briefing():
     lines = []
     for n, item in enumerate(spoken, 1):
         who = item["from"].split("<")[0].strip()
-        line = f'{n}. From {who}: "{item["subject"]}" -- {item.get("reason", "")}'
+        line = f'{n}. From {who}, "{item["subject"]}"'
         if item.get("returned_to_you"):
-            line += (f' IMPORTANT: he filed this under Waiting For on '
-                     f'{item["prior_since"]}; they have now replied, so it is '
-                     f'back on him. Say so.')
+            line += (f' -- he filed this under Waiting For on '
+                     f'{item["prior_since"]} and they have NOW REPLIED, so it '
+                     f'is back on him. Lead with that.')
+        line += f'\n   What it says: {item.get("gist", "")}'
+        if item.get("decision"):
+            line += f'\n   What he must decide: {item["decision"]}'
         lines.append(line)
 
     return f"""You are a morning inbox assistant, on the phone with your user.
@@ -97,7 +100,12 @@ You have ALREADY triaged his inbox. {t['total']} arrived overnight. You filed
 
 Open the call like this, in your own words: greet him, say how many came in,
 say how many you filed, say how many need him. Then go through the items below
-ONE AT A TIME. After each one, stop and ask what he wants to do, then wait.
+ONE AT A TIME.
+
+For each item, tell him WHAT IT SAYS -- the number, the date, the ask. He is on
+a phone and cannot see the email, so "Dave replied about the quote" is useless
+to him; he needs "Dave's quote came back $1,400 over, he needs an answer by
+Monday". Give him the substance, then ask what he wants to do, then WAIT.
 
 The items:
 {chr(10).join(lines)}

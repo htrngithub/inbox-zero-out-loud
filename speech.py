@@ -84,16 +84,25 @@ def item_line(item, index):
             who=who, subject=subject)
         tail = ("so that's back on your plate now."
                 if index == 1 else "so that one's yours again.")
+        gist = item.get("gist", "").strip()
         return (
             f"{opener} -- {lead}"
             f'<break time="350ms"/> '
             f"You'd been waiting on that since the {ordinal(d.day)},"
             f'<break time="200ms"/> '
             f"{tail}"
+            + (f'<break time="350ms"/> {gist}' if gist else "")
         )
 
     # The model's reason usually names the person already; saying the name
     # first as well gives you "Priya. Priya needs your availability."
+    # He is on a phone and cannot see the email, so lead with what it SAYS.
+    gist = item.get("gist", "").strip()
+    if gist:
+        if who.lower() in gist.lower()[:30]:
+            return f'{opener} -- {gist}'
+        return f'{opener} -- {who}.<break time="250ms"/> {gist}'
+
     reason = item.get("reason", "").strip().rstrip(".")
     if reason and len(reason) < 60:
         if who.lower() in reason.lower():

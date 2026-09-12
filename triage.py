@@ -39,11 +39,22 @@ Rules that matter:
 
 Return ONLY valid JSON, no markdown fence:
 {"items": [{"id": "...", "bucket": "...", "reason": "<one short clause>",
-            "one_line": "<how you would say this out loud, one sentence>",
+            "gist": "<what the email actually SAYS, spoken aloud>",
+            "decision": "<the question he has to answer, or null>",
             "confident": true}]}
 
-"one_line" is spoken on a phone call. Write it the way a person talks: short,
-no preamble, no "this email is about". Lead with who it is from and what they want.
+"gist" is the important field. It is read to him on a phone call and it is all
+he gets -- he cannot see the email. Give him the SUBSTANCE, not the topic:
+the number, the date, the ask, the constraint. One or two sentences, the way
+you would tell a colleague across a desk.
+
+  BAD:  "Dave replied about the kitchen quote."      (tells him nothing)
+  GOOD: "Dave's revised quote came back about $1,400 over -- cabinets came
+         down, electrical went up once he saw the panel. He needs an answer
+         by Monday to hold the installer."
+
+"decision" is the single question he must answer, phrased as a question, or
+null if the item needs an action but no judgement. Keep it under ten words.
 """
 
 
@@ -159,7 +170,8 @@ def triage_offline(messages, state):
             "id": m["id"],
             "bucket": bucket,
             "reason": reason,
-            "one_line": f"{m['from'].split('<')[0].strip()}: {m['subject']}",
+            "gist": m["body"][:220],
+            "decision": None,
             "confident": True,
         })
     return items
@@ -176,6 +188,8 @@ def enrich(items, messages, state):
         prior = prior_decision_for(m, state)
         it["subject"] = m["subject"]
         it["from"] = m["from"]
+        it.setdefault("gist", m["body"][:220])
+        it.setdefault("decision", None)
         it["spoken"] = it["bucket"] in SPOKEN_BUCKETS
         if prior:
             it["prior_bucket"] = prior["bucket"]
