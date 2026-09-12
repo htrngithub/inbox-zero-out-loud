@@ -39,6 +39,25 @@ SESSION = {"items": [], "gmail": None, "labels": {}, "decisions": [],
 
 # Without this the model only TALKS about filing things. The whole point is
 # that saying it out loud is what moves the label.
+READ_MORE_TOOL = {
+    "type": "function",
+    "name": "read_more",
+    "description": (
+        "Get the fuller text of one email, when he asks for more detail "
+        "before deciding. Call this whenever he asks what it says, who it is "
+        "from, to read it, or for more context."),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "item_number": {
+                "type": "integer",
+                "description": "Which item on the list, starting at 1.",
+            },
+        },
+        "required": ["item_number"],
+    },
+}
+
 CALL_BACK_TOOL = {
     "type": "function",
     "name": "call_back_later",
@@ -165,6 +184,13 @@ How to talk:
 - When he answers clearly, confirm in three words and move on.
 - If he interrupts, stop talking and listen.
 - When the last item is done, say everything else is filed, then stop.
+
+IF HE WANTS MORE DETAIL:
+He only gets the summary by default. If he asks what it says, who sent it,
+to read it out, or anything that means "I need more before I decide" -- call
+read_more for that item, then tell him what it says and ask again. Never make
+him decide on information he does not have, and never make something up: if
+read_more gives you nothing, say the summary is all you have.
 
 IF HE IS BUSY:
 He may answer while doing something else. If he says he cannot talk now, or
@@ -316,7 +342,7 @@ async def media_stream(ws: WebSocket):
                                "voice": VOICE},
                 },
                 "instructions": briefing(),
-                "tools": [FILE_EMAIL_TOOL, CALL_BACK_TOOL],
+                "tools": [FILE_EMAIL_TOOL, READ_MORE_TOOL, CALL_BACK_TOOL],
                 "tool_choice": "auto",
             },
         }))
@@ -362,8 +388,11 @@ async def media_stream(ws: WebSocket):
                     })
                 elif ev.get("type") == \
                         "response.function_call_arguments.done":
-                    if ev.get("name") == "call_back_later":
+                    name = ev.get("name")
+                    if name == "call_back_later":
                         await handle_call_back(oai, ev)
+                    elif name == "read_more":
+                        await handle_read_more(oai, ev)
                     else:
                         await handle_file_email(oai, ev)
                 elif ev.get("type") == "response.done":
@@ -393,6 +422,44 @@ def heard_a_decision():
         return False
     low = last.lower()
     return any(w in low for w in DECISION_WORDS)
+
+
+async def handle_read_more(oai, ev):
+    """He wants the detail before ruling.
+
+    The gist is enough for most items; for the rest he needs what the sender
+    actually wrote. Reading it to him is cheaper than making him open a laptop,
+    which is the entire point of the call.
+    """
+    try:
+        args = json.loads(ev.get("arguments") or "{}")
+        n = int(args.get("item_number", 0))
+        item = SESSION["items"][n - 1] if 1 <= n <= len(SESSION["items"]) else None
+        if not item:
+            raise ValueError(f"no item {n}")
+
+        body = (item.get("body") or item.get("gist") or "").strip()
+        body = " ".join(body.split())[:700]
+        who = item["from"].split("<")[0].strip()
+        detail = (f'From {who}, subject "{item["subject"]}". '
+                  f'It reads: {body}')
+        if item.get("prior_since"):
+            detail += (f' You filed this under {item.get("prior_bucket")} on '
+                       f'{item["prior_since"]}.')
+        print(f"  read more: {item['subject'][:40]}")
+        result = detail
+    except Exception as e:
+        print(f"  ! read_more failed: {e}")
+        result = "I do not have more than the summary for that one."
+
+    await oai.send(json.dumps({
+        "type": "conversation.item.create",
+        "item": {"type": "function_call_output", "call_id": ev.get("call_id"),
+                 "output": result + " Read this to him naturally, do not "
+                                    "recite it word for word if it is long, "
+                                    "then ask again what he wants to do."},
+    }))
+    await oai.send(json.dumps({"type": "response.create"}))
 
 
 async def handle_call_back(oai, ev):

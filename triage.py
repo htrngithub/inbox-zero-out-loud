@@ -233,6 +233,8 @@ def enrich(items, messages, state):
             it["gmail_id"] = m["gmail_id"]
         it.setdefault("gist", m["body"][:220])
         it.setdefault("decision", None)
+        # Kept so the call can read him the actual text when he asks for more.
+        it["body"] = m.get("body", "")[:1500]
         it["spoken"] = it["bucket"] in SPOKEN_BUCKETS
         if prior:
             it["prior_bucket"] = prior["bucket"]
