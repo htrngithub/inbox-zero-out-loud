@@ -58,9 +58,44 @@ null if the item needs an action but no judgement. Keep it under ten words.
 """
 
 
-def load_inbox(path):
+def load_inbox(path, live=False):
+    """Read the inbox: from Gmail when it is connected, else the fixture.
+
+    The fixture carries the same shape, so everything downstream is identical
+    whether or not Gmail is wired up.
+    """
+    if live:
+        msgs = load_from_gmail()
+        if msgs:
+            return msgs
+        print("  ! Gmail returned nothing; using the fixture.", file=sys.stderr)
     with open(path) as f:
         return json.load(f)["messages"]
+
+
+def load_from_gmail():
+    """Pull the inbox, keeping the gmail_id needed to move labels later."""
+    try:
+        import gmail_apply
+        if not gmail_apply.available():
+            return None
+        svc = gmail_apply.get_service()
+        raw = gmail_apply.list_inbox(svc, limit=25)
+    except Exception as e:
+        print(f"  ! Could not read Gmail ({e}).", file=sys.stderr)
+        return None
+
+    msgs = []
+    for n, m in enumerate(raw, 1):
+        msgs.append({
+            "id": f"g{n:02d}",
+            "gmail_id": m["gmail_id"],
+            "from": m["from"],
+            "subject": m["subject"],
+            "date": m["date"],
+            "body": m.get("snippet", ""),
+        })
+    return msgs
 
 
 def load_state(path):
@@ -188,6 +223,9 @@ def enrich(items, messages, state):
         prior = prior_decision_for(m, state)
         it["subject"] = m["subject"]
         it["from"] = m["from"]
+        # Carried through so a spoken decision can move the real label.
+        if m.get("gmail_id"):
+            it["gmail_id"] = m["gmail_id"]
         it.setdefault("gist", m["body"][:220])
         it.setdefault("decision", None)
         it["spoken"] = it["bucket"] in SPOKEN_BUCKETS
@@ -214,7 +252,8 @@ def enrich(items, messages, state):
 def main():
     inbox_path = BUILD / "fixtures" / "inbox.json"
     state_path = BUILD / "state" / "state.json"
-    messages = load_inbox(inbox_path)
+    live = "--live" in sys.argv
+    messages = load_inbox(inbox_path, live=live)
     state = load_state(state_path)
 
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -245,7 +284,8 @@ def main():
     with open(out_path, "w") as f:
         json.dump(out, f, indent=2)
 
-    print(f"Triaged {out['total']} emails via {mode}.")
+    src = "Gmail" if any(m.get("gmail_id") for m in messages) else "fixture"
+    print(f"Triaged {out['total']} emails from the {src} via {mode}.")
     print(f"  {out['spoken_count']} need you, {out['silent_count']} handled silently.\n")
     for i in items:
         mark = "SPEAK " if i["spoken"] else "silent"

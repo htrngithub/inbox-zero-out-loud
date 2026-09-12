@@ -73,9 +73,10 @@ def list_inbox(service, limit=20):
         userId="me", labelIds=["INBOX"], maxResults=limit).execute()
     out = []
     for m in res.get("messages", []):
+        # 'full' rather than 'metadata': the triage needs the body to say what
+        # the email actually asks for.
         full = service.users().messages().get(
-            userId="me", id=m["id"], format="metadata",
-            metadataHeaders=["Subject", "From", "Date"]).execute()
+            userId="me", id=m["id"], format="full").execute()
         hdrs = {h["name"]: h["value"]
                 for h in full["payload"].get("headers", [])}
         out.append({
@@ -83,8 +84,34 @@ def list_inbox(service, limit=20):
             "subject": hdrs.get("Subject", ""),
             "from": hdrs.get("From", ""),
             "date": hdrs.get("Date", ""),
+            "snippet": extract_body(full),
         })
     return out
+
+
+def extract_body(msg):
+    """Pull readable text out of a Gmail message.
+
+    Falls back to the snippet, which is short but always present -- better a
+    truncated gist than none.
+    """
+    import base64 as _b64
+
+    def walk(part):
+        if part.get("mimeType") == "text/plain":
+            data = part.get("body", {}).get("data")
+            if data:
+                return _b64.urlsafe_b64decode(data).decode("utf-8", "replace")
+        for sub in part.get("parts", []) or []:
+            found = walk(sub)
+            if found:
+                return found
+        return None
+
+    text = walk(msg.get("payload", {})) or msg.get("snippet", "")
+    # Quoted replies add noise without adding meaning.
+    lines = [l for l in text.splitlines() if not l.strip().startswith(">")]
+    return "\n".join(lines).strip()[:1200]
 
 
 def apply_bucket(service, gmail_id, bucket, label_ids):
